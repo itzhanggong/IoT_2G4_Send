@@ -1,0 +1,145 @@
+C51 COMPILER V7.10   MAIN_GPM8F2202                                                        12/18/2015 16:49:43 PAGE 1   
+
+
+C51 COMPILER V7.10, COMPILATION OF MODULE MAIN_GPM8F2202
+OBJECT MODULE PLACED IN .\Main_GPM8F2202.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\Main_GPM8F2202.C BROWSE DEBUG OBJECTEXTEND OBJECT(.\Main_GPM8F2202.obj)
+
+line level    source
+
+   1          #include <GPM8F2202.h>
+   2          #include "xstring.h"
+   3          #include "uart.h"
+   4          #include "ver.h"
+   5          #include "spi.h"
+   6          
+   7          void reset_mt7681()
+   8          {
+   9   1              ES = 0;                                 //disable Uart Interrupt(Optional)
+  10   1              MT7681_RESET=0;
+  11   1              mt7681_wdt=8;
+  12   1              while(mt7681_wdt);
+  13   1              MT7681_RESET = 1;
+  14   1              mt7681_wdt=10000;
+  15   1              ES = 1;                                 //enable Uart Interrupt(Optional)
+  16   1              SEND_VER;
+  17   1      }
+  18          
+  19          void Init()
+  20          {
+  21   1              
+  22   1              P3_PU = P3 =0xFF;                                       //Set P3 as input pull high stauts
+  23   1          P3_PD = 0x18;                                               //set P3^4,P3^3 output;
+  24   1              
+  25   1              P0_PU = P0_PD = 0x3B;                           //Set P0^5, P0^4, P0^3, P0^1, P0^0 output;                      
+  26   1      
+  27   1              SPICS   = 1;
+  28   1              SPICLK  = 0;
+  29   1              RFRST   = 0;                    
+  30   1              
+  31   1              IOSCCON = 0x00;                                 //set Clock Source = 16Mhz;
+  32   1              
+  33   1              SCON    = 0x50;                                 //Set UART as mode1 and enable reception.
+  34   1              TMOD    = 0x22;                                 //Initialize Timer1 as mode2.
+  35   1              PCON    = 0x80;                                 //Set SMOD =1
+  36   1              TL1             = 0xF7;                                 //Set Boud rate as 9600bit/s
+  37   1              TH1             = 0xF7;
+  38   1              TL0             = 0x7A;
+  39   1              TH0             = 0x7A;
+  40   1              EA              = 1;
+  41   1              ET0             = 1;
+  42   1              TR1             = 1;                                    //Start Timer1 Counter
+  43   1              TR0             = 1;                                    //Start Timer0 Counter
+  44   1              reset_mt7681();
+  45   1      }
+  46          
+  47          
+  48          uint16 RF_init()
+  49          {
+  50   1              RFRST= 0;       
+  51   1              Wait_mSec(100);
+  52   1              RFRST= 1;                                                       //Enable PL1167
+  53   1              Wait_mSec(500);                                         //delay 500ms to let PL1167 stable      ~~~~~~~~~
+  54   1              
+  55   1              Reg_write16(0x00,0x6f,0xe0);
+C51 COMPILER V7.10   MAIN_GPM8F2202                                                        12/18/2015 16:49:43 PAGE 2   
+
+  56   1              Reg_write16(0x01,0x56,0x81);
+  57   1              Reg_write16(0x02,0x66,0x17);
+  58   1              Reg_write16(0x04,0x9c,0xc9);
+  59   1              Reg_write16(0x05,0x66,0x37);
+  60   1              Reg_write16(0x07,0x00,0x30);
+  61   1              Reg_write16(0x08,0x6c,0x90);
+  62   1              Reg_write16(0x09,0x48,0x00); 
+  63   1              Reg_write16(0x0a,0x7f,0xfd);
+  64   1              Reg_write16(0x0b,0x00,0x08);
+  65   1              Reg_write16(0x0c,0x00,0x00);
+  66   1              Reg_write16(0x0d,0x48,0xbd);
+  67   1              Reg_write16(0x16,0x00,0xff);
+  68   1              Reg_write16(0x17,0x80,0x05);
+  69   1              Reg_write16(0x18,0x00,0x67);
+  70   1              Reg_write16(0x19,0x16,0x59);
+  71   1              Reg_write16(0x1a,0x1b,0xe0); 
+  72   1              Reg_write16(0x1b,0x13,0x00);
+  73   1              Reg_write16(0x1c,0x18,0x00);
+  74   1              Reg_write16(0x20,0x40,0x00); 
+  75   1              Reg_write16(0x21,0x3f,0xc7);
+  76   1              Reg_write16(0x22,0x20,0x00);
+  77   1              Reg_write16(0x23,0x05,0x80);
+  78   1                                                                      //Begin Syncword                                
+  79   1              Reg_write16(0x24,0x42,0x31);
+  80   1              Reg_write16(0x25,0x86,0x75);
+  81   1              Reg_write16(0x26,0x9a,0x0b);
+  82   1              Reg_write16(0x27,0xde,0xcf);
+  83   1                                                                      //End syncword
+  84   1              Reg_write16(0x28,0x44,0x01);
+  85   1              Reg_write16(0x29,0xb8,0x00); 
+  86   1              Reg_write16(0x2a,0xfd,0xb0);
+  87   1              Reg_write16(0x2b,0x00,0x0f);
+  88   1              Wait_mSec(10);                          //delay 10ms to let PL1167 for operation                                        
+  89   1              return GetReg7FromChip();
+  90   1      }
+  91          
+  92          
+  93          
+  94          void main()
+  95          {
+  96   1              Init(); 
+  97   1              CKCON = WatchDogTimer_11;
+  98   1              while(RF_init() != 0x0030){
+  99   2                      RF_init();
+ 100   2              }
+ 101   1               
+ 102   1      //      xWatchdogSet
+ 103   1              while(1)
+ 104   1              {
+ 105   2      //              xWatchdogClr 
+ 106   2                      if(rx_complete){
+ 107   3                              SEND_ACK;
+ 108   3                              rx_complete=0;
+ 109   3                              xmemcpy(cmd_buff, &rx_buff[1], CMD_BUFF_LEN);
+ 110   3                              //_parseCmd();
+ 111   3                              spi_Send(cmd_buff, CMD_BUFF_LEN);                       //·¢ËÍÊý¾Ý
+ 112   3                      }
+ 113   2      
+ 114   2                      if(mt7681_wdt==0){
+ 115   3                              reset_mt7681();
+ 116   3                      }
+ 117   2              }
+C51 COMPILER V7.10   MAIN_GPM8F2202                                                        12/18/2015 16:49:43 PAGE 3   
+
+ 118   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    479    ----
+   CONSTANT SIZE    =     40    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
